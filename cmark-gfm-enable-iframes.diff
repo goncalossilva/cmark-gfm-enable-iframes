@@ -1,0 +1,13 @@
+diff --git a/extensions/tagfilter.c b/extensions/tagfilter.c
+index 262352e..1100f58 100644
+--- a/extensions/tagfilter.c
++++ b/extensions/tagfilter.c
+@@ -3,7 +3,7 @@
+ #include <ctype.h>
+ 
+ static const char *blacklist[] = {
+-    "title",   "textarea", "style",  "xmp",       "iframe",
++    "title",   "textarea", "style",  "xmp",
+     "noembed", "noframes", "script", "plaintext", NULL,
+ };
+ 
