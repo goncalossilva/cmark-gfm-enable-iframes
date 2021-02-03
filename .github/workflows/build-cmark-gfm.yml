@@ -1,0 +1,68 @@
+name: Build cmark-gfm
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 0 * * * *
+
+jobs:
+  build-latest-version:
+    runs-on: ubuntu-latest
+    env:
+      BINARY: "build/src/cmark-gfm"
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Update version
+        run: |
+          VERSION=`wget -qO- https://api.github.com/repos/github/cmark-gfm/releases/latest | python -c 'import sys, json; print(json.load(sys.stdin)["tag_name"])'`
+          [ -z "$VERSION" ] && exit 1
+          echo "$VERSION" > VERSION
+          git diff --quiet || echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Download cmark-gfm
+        if: env.VERSION != ''
+        run: wget -qO- https://github.com/github/cmark-gfm/archive/$VERSION.tar.gz | tar xvzf - --strip 1
+
+      - name: Patch
+        if: env.VERSION != ''
+        run: git apply cmark-gfm-enable-iframes.diff
+
+      - name: Build
+        if: env.VERSION != ''
+        run: |
+          mkdir build && cd build && \
+          cmake .. -D CMARK_SHARED=OFF && make && \
+          cd .. && [ -f $BINARY ]
+
+      - name: Create release
+        id: create_release
+        if: env.VERSION != ''
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: ${{ env.VERSION }}
+          draft: false
+          prerelease: false
+
+      - name: Upload release binary
+        if: env.VERSION != ''
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # Set in create_release step above.
+          asset_path: ${{ env.BINARY }}
+          asset_name: cmark-gfm-linux-amd64
+          asset_content_type: application/x-executable
+
+      - name: Commit
+        if: env.VERSION != ''
+        run: |
+          git config --global user.name "Gonçalo Silva"
+          git config --global user.email "goncalossilva@gmail.com"
+          git add VERSION
+          git commit -m "cmark-gfm $VERSION"
+          git push
