@@ -31,9 +31,10 @@ jobs:
       - name: Build
         if: env.VERSION != ''
         run: |
-          mkdir build && cd build && \
-          cmake .. -D CMARK_SHARED=OFF && make && \
-          cd .. && [ -f $BINARY ]
+          docker build -t build-deps - <Dockerfile.build-deps
+          docker run -it --rm -v $PWD:/app build-deps \
+            sh -c 'mkdir build && cd build && cmake .. -D CMARK_SHARED=OFF && make'
+          [ -f $BINARY ]
 
       - name: Create release
         id: create_release
